@@ -78,6 +78,11 @@ neutron-star "islands" above the lowest BH-forming mass are kept. Related option
 - `kick_model` (default `"fallback"`): Maxwellian natal kicks with dispersion `sigmans`, scaled by (1 - fallback
   fraction), with no kick for BHs from pulsational pair instability. `"compas"` uses the kicks applied by COMPAS.
 
+The default GW recoil model (`remnant_model="RemnantModelSimple"`) computes remnant spins and kicks but sets the
+remnant mass to m1 + m2. The NR-surrogate models `RemnantModelVarma19Islam23` and `RemnantModelIslam26` include the
+mass radiated in GWs; install their dependencies with `pip install ".[nr]"` (surfinBH downloads its fit data, a few
+minutes, on first use).
+
 Tables are built with `scripts/make_compas_remnant_tables.py`, which needs a COMPAS executable and `h5py`. The aBH
 option is not available with these tables.
 

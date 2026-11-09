@@ -32,6 +32,7 @@ classifiers = [
 
 [project.optional-dependencies]
 tables = ["h5py"]  # Only needed to rebuild the COMPAS remnant tables
+nr = ["surfinBH", "BHPTNRremnant", "gwModels", "torch", "nflows"]  # NR-surrogate recoil models (RemnantModelVarma19Islam23, RemnantModelIslam26)
 
 [project.urls]
 repository = "https://github.com/cBHBd/cBHBd"
