@@ -30,6 +30,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Astronomy",
 ]
 
+[project.optional-dependencies]
+tables = ["h5py"]  # Only needed to rebuild the COMPAS remnant tables
+
 [project.urls]
 repository = "https://github.com/cBHBd/cBHBd"
 # documentation = "https://cBHBd.readthedocs.org"

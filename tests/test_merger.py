@@ -1,4 +1,4 @@
-import cbhbd.cluster
+import cbhbd.cbhbd
 import numpy as np
 
 
@@ -19,12 +19,19 @@ def test_merger():
     assert len(model.mergers) != 0, "No mergers found but some are expected for these initial conditions"
 
     assert model.mIMBH > 0, f"IMBH mass is not properly computed, {model.mIMBH = }"
-    assert model.chiIMBH > 0, f"IMBH spin is not properly computed, {model.chiIMBH = }"
-    assert model.genIMBH > 0, f"IMBH generation is not properly computed, {model.genIMBH = }"
+    assert model.genIMBH >= 1, f"IMBH generation is not properly computed, {model.genIMBH = }"
+    # 1G BHs have zero natal spin. If every merger product was ejected, the most massive retained BH is 1G and
+    # spinless, which is a legitimate outcome for some seeds.
+    assert model.chiIMBH >= 0, f"IMBH spin is not properly computed, {model.chiIMBH = }"
+    if model.genIMBH > 1:
+        assert model.chiIMBH > 0, f"Merger product with zero spin, {model.chiIMBH = }"
 
     assert model.mIMBHej > 0, f"IMBHej mass is not properly computed, {model.mIMBHej = }"
     assert model.chiIMBHej > 0, f"IMBHej spin is not properly computed, {model.chiIMBHej = }"
     assert model.genIMBHej > 0, f"IMBHej generation is not properly computed, {model.genIMBHej = }"
+
+    assert {"gen1", "gen2"} <= set(model.mergers.columns), "Per-component generations missing from the output"
+    assert (model.mergers.gen == model.mergers[["gen1", "gen2"]].max(axis=1)).all()
 
     assert model.cluster.M_interp(model.cluster.tfin) >= 0, "Final cluster mass is not properly computed"
     assert model.cluster.Mbh_interp(model.cluster.tfin) >= 0, "Final BH mass is not properly computed"

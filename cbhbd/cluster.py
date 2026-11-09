@@ -9,6 +9,7 @@ import warnings
 from scipy.integrate import IntegrationWarning
 
 from cbhbd.cluster_prescriptions import _get_cluster_prescriptions
+from cbhbd import remnant_tables
 
 # Neglect warnings.
 warnings.filterwarnings("ignore", category=IntegrationWarning)
@@ -62,6 +63,9 @@ class Cluster:
         self.N_points = 500  # Number of points used for even spacing.
         self.Mbh0, self.mbh0 = 1e-99, 1e-89  # [Msun, Msun]. We set the BH masses equal to 0. They are later extracted from the BHMF. If not, the cluster is evolved without BHs.
         self.ifmr = None  # Defined in CBHBD class
+        self.keep_envelope = None  # Defined in CBHBD class
+        self.kick_model = None  # Defined in CBHBD class
+        self.remnant_table = None  # Set when ifmr is a tabulated COMPAS model (see remnant_tables.py)
 
         # Model parameters.
         self.mns = 1.4  # [Msun] Mass of Neutron Stars (NS).
@@ -278,9 +282,19 @@ class Cluster:
             self.ibh_kwargs.setdefault('BH_IFMR_method', self.ifmr)  # Default IFMR.
 
             # Implement kicks, if activated, for this IMF, number of stars, with such metallicity, central escape velocity and BHMF conditions.
-            self.ibh = ssptools.InitialBHPopulation.from_powerlaw(self.m_breaks, self.a_slopes, self.nbins, self.FeH,
-                                                                  N0=self.N, vesc=self.vesc0, natal_kicks=self.kick,
-                                                                  **self.ibh_kwargs)
+            if remnant_tables.is_table(self.ifmr):
+                # Tabulated single-star outcomes from COMPAS (see remnant_tables.py)
+                self.remnant_table = remnant_tables.TabulatedRemnants(self.ifmr, self.FeH, Zsolar=self.Zsolar,
+                                                                      keep_envelope=self.keep_envelope,
+                                                                      kick_model=self.kick_model)
+                self.ibh = self.remnant_table.initial_bh_population(self.m_breaks, self.a_slopes, self.nbins, self.N,
+                                                                    vesc=self.vesc0, sigma=self.sigmans,
+                                                                    natal_kicks=self.kick)
+            else:
+                self.remnant_table = None
+                self.ibh = ssptools.InitialBHPopulation.from_powerlaw(self.m_breaks, self.a_slopes, self.nbins,
+                                                                      self.FeH, N0=self.N, vesc=self.vesc0,
+                                                                      natal_kicks=self.kick, **self.ibh_kwargs)
             self.sev_rates = ssptools.LuminousEvMassLoss(self.ibh.IMF,
                                                          self.FeH)  # Provides rates of changes for the stellar population for a given IMF and metallicity.
             self.tsev = self.sev_rates.tlim  # [Myr] Time instance where stellar evolution commences.

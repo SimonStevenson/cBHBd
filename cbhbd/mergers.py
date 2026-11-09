@@ -53,7 +53,8 @@ def _run_mergers(self):
 
     # Build array with BH properties for retained stellar-mass BHs
     Mtot, self.bhv = funcs.sample_BHs(self.cluster.Mbh[0], v_esc0, self.m_breaks[-2], self.mmax,
-                                      self.a_slopes[-1], self.FeH, self.ifmr, self.cluster.sigmans, self.mmax_IMF)
+                                      self.a_slopes[-1], self.FeH, self.ifmr, self.cluster.sigmans, self.mmax_IMF,
+                                      table=self.cluster.remnant_table)
     Nbh0 = len(self.bhv)
 
     if self.verbose:
@@ -438,6 +439,8 @@ def _run_mergers(self):
                     "S2": S2,  # Spin of secondary BH
                     "a": a,  # Semimajor axis before GW radiation takes over [AU]
                     "gen": round(max(gen1, gen2)),  # Generation of merger
+                    "gen1": round(gen1),  # Generation of the primary BH (1 = first generation)
+                    "gen2": round(gen2),  # Generation of the secondary BH
                     "Mbh": Mbh,  # Total mass in BHs in the cluster at t_sim [Msun]
                     })
 
@@ -449,7 +452,7 @@ def _run_mergers(self):
 def _format_merger_output(bbh):
     bbh = pd.DataFrame(bbh)
     colnames = ["t_merge", "t_sim", "m1", "m2", "m_rem", "e", "merger_type", "rh", "v_kick", "v_esc",
-                "chi_f", "S1", "S2", "a", "gen", "Mbh"]
+                "chi_f", "S1", "S2", "a", "gen", "gen1", "gen2", "Mbh"]
     assert len(bbh) == 0 or (bbh.columns.values == colnames).all(), f"Wrong column names in output"
     if len(bbh) == 0:
         bbh = pd.DataFrame(columns=colnames)

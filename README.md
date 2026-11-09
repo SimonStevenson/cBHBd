@@ -52,6 +52,35 @@ with the following arguments:
 
 If you only want to run the cluster evolution, you can use `compute_mergers=False` for efficiency
 
+### Remnant masses from COMPAS
+
+First-generation BH masses can be taken from tables of COMPAS single-star outcomes instead of the ssptools IFMRs, so
+that cluster and isolated-binary models share the same stellar physics:
+
+```
+c = CBHBD(M0=1e6, rh0=1, Z=0.001, ifmr="compas-maltsev-balanced")
+```
+
+Available tables (`cbhbd.remnant_tables.available_tables()`):
+
+- `compas-maltsev-balanced`, `compas-maltsev-optimistic`, `compas-maltsev-pessimistic`: the Maltsev et al. (2025)
+  compactness-based prescription (`MALTSEV2024` in COMPAS), with the three low-metallicity variants of Willcox et al.
+  (2025)
+- `compas-fryer-delayed`: Fryer et al. (2012) delayed
+- `compas-mullermandel`: Mandel & Müller (2020), the COMPAS default
+
+All tables use the `HENDRIKS` pulsational pair-instability prescription and cover Z = 1e-4 to 0.03 and ZAMS masses of
+10 to 150 Msun. Each grid point stores several COMPAS realisations, so stochastic prescriptions are sampled, and
+neutron-star "islands" above the lowest BH-forming mass are kept. Related options:
+
+- `keep_envelope` (default `False`): if `True`, core-collapse BHs also accrete the hydrogen envelope, scaled by the
+  fallback fraction. COMPAS `MALTSEV2024` sets the BH mass to the He-core mass.
+- `kick_model` (default `"fallback"`): Maxwellian natal kicks with dispersion `sigmans`, scaled by (1 - fallback
+  fraction), with no kick for BHs from pulsational pair instability. `"compas"` uses the kicks applied by COMPAS.
+
+Tables are built with `scripts/make_compas_remnant_tables.py`, which needs a COMPAS executable and `h5py`. The aBH
+option is not available with these tables.
+
 ## Analysing the ᴄBHBᴅ output
 
 The output of the simulations is stored in a `CBHBD` object. The cluster properties can be accessed from `c.cluster`.
@@ -71,6 +100,7 @@ The merger properties are stored in a `pandas.Dataframe` in `c.mergers`. See `me
 c.mergers # The merger data, use print(c.mergers) to see a table of the merger properties
 c.mergers.m1 # The mass of the primary
 c.mergers.merger_type # The type of merger (ejected, gw_capture, ...), see the code for the full documentation
+c.mergers.gen1, c.mergers.gen2 # Generation of each component (1 = first generation); c.mergers.gen is the larger
 ... 
 c.mergers.to_numpy() # You can also export the merger data to a numpy array
 ```

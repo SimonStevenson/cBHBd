@@ -2,6 +2,7 @@ import numpy as np
 from . import cluster
 from . import mergers
 from . import remnant
+from . import remnant_tables
 
 
 class MergerOutcome:
@@ -45,7 +46,10 @@ class CBHBD:
         self.add_aBH = False  # If true, add BHs above the pair-instability mass gap according to Gieles et al. (2025).
         self.remnant_model = "RemnantModelSimple"  # GW remnant model, see remnant.py for available options.
         self.compute_mergers = True  # If true, compute the mergers. If false, only compute the cluster model.
-        self.ifmr = "sevn-rapid"  # IFMR relation to be used if ssp is selected.
+        self.ifmr = "sevn-rapid"  # IFMR relation to be used if ssp is selected. Either an ssptools BH_method or a
+        # tabulated COMPAS model, see remnant_tables.available_tables(), e.g. "compas-maltsev-balanced".
+        self.keep_envelope = False  # Tabulated COMPAS IFMRs only. If True, core-collapse BHs also accrete the H envelope (scaled by the fallback fraction).
+        self.kick_model = "fallback"  # Tabulated COMPAS IFMRs only. "fallback": Maxwellian kicks with sigmans scaled by (1 - fallback fraction); "compas": kicks applied by COMPAS.
 
         self.dtout = None  # [Myr] Time step for integration. If None, computations are faster.
         self.dense_output = True  # Condition for solve_ivp to give continuous solutions. Facilitates interpolation. Can be used instead of specifying t_eval. Necessary if compute_mergers==True.
@@ -85,6 +89,13 @@ class CBHBD:
         self._construct_input_params()
 
         self.mmax_IMF = self.m_breaks[-1]
+        if remnant_tables.is_table(self.ifmr):
+            if self.add_aBH:
+                raise NotImplementedError("aBHs are not implemented for tabulated COMPAS IFMRs")
+            m_table_max = remnant_tables.table_mass_range(self.ifmr)[1]
+            if self.m_breaks[-1] > m_table_max * 1.001:
+                raise ValueError(f"The IMF extends to {self.m_breaks[-1]} Msun, beyond the ZAMS masses in table "
+                                 f"{self.ifmr} ({m_table_max:.0f} Msun)")
         if self.add_aBH:
             mmax_aBH = 250 * self.M0 / 1e4
             assert mmax_aBH >= self.mmax_IMF, "Can't have aBHs with this IMF"

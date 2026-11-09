@@ -13,28 +13,33 @@ def sample_power_law(xmin, xmax, alpha, size):
     return (-(xmin ** (1 + alpha) * (-1 + r)) + xmax ** (1 + alpha) * r) ** (1 / (1 + alpha))
 
 
-def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF):
+def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF, table=None):
     # Sample the original population of stellar-mass BHs. The total mass of the population is (approximately) Mbh.
     # Remove BHs with a kick velocity greater than v_esc0. The progenitors follow an IMF with slope alpha between mmin
     # and mmax (possibly with different slopes at lower masses). FeH is the iron abundance, ifmr_str is the
     # initial-final mass relation after stellar evolution (including supernova prescriptions), and sigma is the
     # parameter of the Maxwellian distribution of kick velocities. mmax_IMF is the maximum mass of the IMF before aBHs
-    # (otherwise it's just equal to mmax)
+    # (otherwise it's just equal to mmax). If table is a remnant_tables.TabulatedRemnants object, BH masses and kicks
+    # are drawn from the tabulated COMPAS single-star outcomes instead of the ssptools IFMR.
 
     # Load initial-final mass relation
-    if "rapid" in ifmr_str:
-        SN_method = "rapid"
-    elif "delay" in ifmr_str:
-        SN_method = "delayed"
+    if table is not None:
+        BH_mi_lower = table.BH_mi.lower
     else:
-        raise NotImplementedError(f"For IFMR {ifmr_str}, unknown SN_method (must contain rapid or delay)")
-    ifmr = ssptools.ifmr.IFMR(FeH=FeH, BH_method=ifmr_str)
+        if "rapid" in ifmr_str:
+            SN_method = "rapid"
+        elif "delay" in ifmr_str:
+            SN_method = "delayed"
+        else:
+            raise NotImplementedError(f"For IFMR {ifmr_str}, unknown SN_method (must contain rapid or delay)")
+        ifmr = ssptools.ifmr.IFMR(FeH=FeH, BH_method=ifmr_str)
+        BH_mi_lower = ifmr.BH_mi[0]
 
     # Define limits of the IMF of the progenitor stars
     assert mmax > mmin, "mmax must be greater than mmin"
-    assert mmax > ifmr.BH_mi[0], "The chosen IMF does not form BHs"
-    if mmin > ifmr.BH_mi[0]:
-        raise NotImplementedError(f"Can't have an IMF with a mass break M > {ifmr.BH_mi[0]} Msun")
+    assert mmax > BH_mi_lower, "The chosen IMF does not form BHs"
+    if mmin > BH_mi_lower:
+        raise NotImplementedError(f"Can't have an IMF with a mass break M > {BH_mi_lower} Msun")
 
     # If the cluster doesn't form BHs (Mbh < 1), return
     if Mbh <= 1:
@@ -49,11 +54,16 @@ def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF):
         nsamp = int(i * Mbh / 10)
 
         # Sample BH masses and kicks
-        mproj = sample_power_law(ifmr.BH_mi[0], mmax, alpha, nsamp)
-        mbh = ifmr.predict(mproj)
-        mproj = mproj[mbh > 0.0]  # Remove massless remnants
-        mbh = mbh[mbh > 0.0]  # Remove massless remnants
-        vkick = ssptools.kicks.maxwellian_kick_v(mproj, FeH=FeH, SNe_method=SN_method, vdisp=sigma)
+        mproj = sample_power_law(BH_mi_lower, mmax, alpha, nsamp)
+        if table is not None:
+            mbh, vkick = table.sample(mproj, sigma)
+            keep = mbh > 0.0  # Remove stars that do not form BHs (NS islands, PISN)
+            mproj, mbh, vkick = mproj[keep], mbh[keep], vkick[keep]
+        else:
+            mbh = ifmr.predict(mproj)
+            mproj = mproj[mbh > 0.0]  # Remove massless remnants
+            mbh = mbh[mbh > 0.0]  # Remove massless remnants
+            vkick = ssptools.kicks.maxwellian_kick_v(mproj, FeH=FeH, SNe_method=SN_method, vdisp=sigma)
 
         # Remove kicked BHs (but always keep aBHs)
         mbh = mbh[(vkick <= v_esc0) | (mproj > mmax_IMF)]
