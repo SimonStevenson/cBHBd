@@ -23,7 +23,7 @@ Usage (needs a COMPAS executable and h5py)::
 Variant tables, e.g. a Hendriks pair-instability CO-core shift of -5 Msun for Maltsev balanced (``--extra`` must come
 last)::
 
-    python scripts/make_compas_remnant_tables.py --prescriptions compas-maltsev-balanced --name-suffix -ppi-5 \\
+    python scripts/make_compas_remnant_tables.py --prescriptions compas-maltsev-balanced --name-suffix=-ppi-5 \\
         --extra --PPI-CO-Core-Shift-Hendriks -5
 
 Run ``python scripts/make_compas_remnant_tables.py --help`` for all options.
@@ -122,7 +122,8 @@ def main():
     p.add_argument("--nproc", type=int, default=os.cpu_count())
     p.add_argument("--outdir", default=os.path.join(os.path.dirname(__file__), "..", "cbhbd", "data", "remnant_tables"))
     p.add_argument("--name-suffix", default="",
-                   help="Appended to each table name, e.g. '-ppi-5' for a Hendriks CO-core shift of -5 passed in --extra")
+                   help="Appended to each table name, e.g. --name-suffix=-ppi-5 for a Hendriks CO-core shift of -5 passed in "
+                        "--extra (use the = form: a value starting with '-' is otherwise read as an option)")
     p.add_argument("--extra", nargs=argparse.REMAINDER, default=[],
                    help="Extra COMPAS options appended to every run (must come last)")
     a = p.parse_args()
