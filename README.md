@@ -68,6 +68,11 @@ Available tables (`cbhbd.remnant_tables.available_tables()`):
   (2025)
 - `compas-fryer-delayed`: Fryer et al. (2012) delayed
 - `compas-mullermandel`: Mandel & Müller (2020), the COMPAS default
+- `compas-maltsev-balanced-ppi-10`, `-ppi-5`, `-ppi+5`: Maltsev balanced with the HENDRIKS pulsational
+  pair-instability CO-core shift (`--PPI-CO-Core-Shift-Hendriks`) set to -10, -5 and +5 Msun; at Z = 2.2e-4 the
+  maximum 1G BH mass is 39.5, 45.1 and 56.2 Msun, against 50.7 Msun with no shift. Built on OzSTAR with the same
+  COMPAS commit; an unshifted rebuild there matched the laptop table to about 1e-6 relative (compiler and library
+  differences), with no change in any remnant or supernova type.
 
 All tables use the `HENDRIKS` pulsational pair-instability prescription and cover Z = 1e-4 to 0.03 and ZAMS masses of
 10 to 150 Msun. Each grid point stores several COMPAS realisations, so stochastic prescriptions are sampled, and
