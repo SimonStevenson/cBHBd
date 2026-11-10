@@ -20,6 +20,12 @@ Usage (needs a COMPAS executable and h5py)::
 
     python scripts/make_compas_remnant_tables.py --compas ~/Github/COMPAS/src/COMPAS --nproc 10
 
+Variant tables, e.g. a Hendriks pair-instability CO-core shift of -5 Msun for Maltsev balanced (``--extra`` must come
+last)::
+
+    python scripts/make_compas_remnant_tables.py --prescriptions compas-maltsev-balanced --name-suffix -ppi-5 \\
+        --extra --PPI-CO-Core-Shift-Hendriks -5
+
 Run ``python scripts/make_compas_remnant_tables.py --help`` for all options.
 """
 import argparse
@@ -115,6 +121,8 @@ def main():
     p.add_argument("--seed", type=int, default=20261109, help="Base COMPAS random seed")
     p.add_argument("--nproc", type=int, default=os.cpu_count())
     p.add_argument("--outdir", default=os.path.join(os.path.dirname(__file__), "..", "cbhbd", "data", "remnant_tables"))
+    p.add_argument("--name-suffix", default="",
+                   help="Appended to each table name, e.g. '-ppi-5' for a Hendriks CO-core shift of -5 passed in --extra")
     p.add_argument("--extra", nargs=argparse.REMAINDER, default=[],
                    help="Extra COMPAS options appended to every run (must come last)")
     a = p.parse_args()
@@ -139,7 +147,7 @@ def main():
     os.makedirs(a.outdir, exist_ok=True)
     for name in a.prescriptions:
         arrays = {key: np.stack([results[name][Z][key] for Z in Zs]) for key in results[name][Zs[0]]}
-        path = os.path.join(a.outdir, f"{name}.npz")
+        path = os.path.join(a.outdir, f"{name}{a.name_suffix}.npz")
         np.savez_compressed(path, Z=Zs, m_zams=masses, compas_version=version, compas_command=commands[name],
                             **arrays)
         print(f"Wrote {path} ({os.path.getsize(path) / 1e6:.2f} MB)")
