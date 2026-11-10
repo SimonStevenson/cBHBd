@@ -59,3 +59,14 @@ def test_mergers_with_table_are_reproducible():
 def test_abh_not_supported_with_tables():
     with pytest.raises(NotImplementedError):
         cbhbd.cbhbd.CBHBD(M0=1e5, rh0=1, Z=0.002, ifmr="compas-maltsev-balanced", add_aBH=True, verbose=False)
+
+
+def test_auto_kicks_for_prescriptions_without_fallback():
+    FeH = np.log10(0.002 / 0.02)
+    mm = remnant_tables.TabulatedRemnants("compas-mullermandel", FeH)
+    assert mm.kick_model == "compas"
+    assert remnant_tables.TabulatedRemnants("compas-maltsev-balanced", FeH).kick_model == "fallback"
+    bh = np.where(mm.mbh > 0)
+    assert np.mean(mm.retention_fraction(*bh, 111.0, 217.0)) > 0.5
+    with pytest.warns(UserWarning):
+        remnant_tables.TabulatedRemnants("compas-mullermandel", FeH, kick_model="fallback")

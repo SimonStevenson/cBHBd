@@ -17,9 +17,11 @@ Options (set through ``CBHBD``):
 - ``keep_envelope`` (default False): if True, BHs formed by core collapse also accrete the hydrogen envelope, scaled
   by the fallback fraction. COMPAS sets the BH mass to the He-core mass for MALTSEV2024, i.e. assumes that the
   envelope is lost.
-- ``kick_model`` (default "fallback"): "fallback" draws Maxwellian kicks with dispersion ``sigmans`` scaled by
+- ``kick_model`` (default "auto"): "fallback" draws Maxwellian kicks with dispersion ``sigmans`` scaled by
   (1 - fallback fraction), as in the default cBHBd model. BHs from pulsational pair-instability supernovae receive no
-  kick, as in COMPAS by default. "compas" uses the natal kick magnitudes applied by COMPAS itself.
+  kick, as in COMPAS by default. "compas" uses the natal kick magnitudes applied by COMPAS itself. "auto" is
+  "fallback" except for prescriptions that do not define a fallback fraction (MULLERMANDEL), where it is "compas";
+  otherwise every Mueller-Mandel BH would get a full neutron-star kick.
 
 Pair instability follows the prescription used to build the tables (HENDRIKS by default).
 """
@@ -39,7 +41,10 @@ CCSN, PPISN = 1, 8  # COMPAS supernova types
 bounds = namedtuple("bounds", ("lower", "upper"))
 mbin = namedtuple("mbin", ("lower", "upper"))  # Same layout as ssptools.masses.mbin
 
-KICK_MODELS = ("fallback", "compas")
+KICK_MODELS = ("auto", "fallback", "compas")
+# COMPAS prescriptions that do not define a fallback fraction (it is stored as 0 for every BH), so fallback-scaled
+# kicks would give their BHs full neutron-star kicks. "auto" uses the kicks COMPAS applied for these.
+NO_FALLBACK_PRESCRIPTIONS = ("MULLERMANDEL",)
 
 
 def available_tables():
@@ -84,11 +89,11 @@ class TabulatedRemnants:
         Solar metallicity used to convert [Fe/H] to Z. Must match the convention used by CBHBD (0.02 by default).
     keep_envelope : bool
         If True, core-collapse BHs also accrete the H envelope, scaled by the fallback fraction.
-    kick_model : {"fallback", "compas"}
+    kick_model : {"auto", "fallback", "compas"}
         How natal kicks are computed, see the module documentation.
     """
 
-    def __init__(self, ifmr, FeH, Zsolar=0.02, keep_envelope=False, kick_model="fallback"):
+    def __init__(self, ifmr, FeH, Zsolar=0.02, keep_envelope=False, kick_model="auto"):
         if kick_model not in KICK_MODELS:
             raise ValueError(f"Unknown kick_model {kick_model}, choose from {KICK_MODELS}")
         path = _table_path(ifmr)
@@ -98,9 +103,16 @@ class TabulatedRemnants:
         t = np.load(path)
         self.name = ifmr
         self.keep_envelope = keep_envelope
-        self.kick_model = kick_model
         self.compas_version = str(t["compas_version"])
         self.compas_command = str(t["compas_command"])
+        no_fallback = any(f"--remnant-mass-prescription {p}" in self.compas_command
+                          for p in NO_FALLBACK_PRESCRIPTIONS)
+        if kick_model == "auto":
+            kick_model = "compas" if no_fallback else "fallback"
+        elif kick_model == "fallback" and no_fallback:
+            warnings.warn(f"Table {ifmr} comes from a prescription without a fallback fraction (stored as 0), so "
+                          "kick_model='fallback' gives every BH a full kick; kick_model='compas' or 'auto' is advised")
+        self.kick_model = kick_model
         self.Z_grid = t["Z"]
         self.m_zams = t["m_zams"].astype(float)
 

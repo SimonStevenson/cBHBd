@@ -75,8 +75,10 @@ neutron-star "islands" above the lowest BH-forming mass are kept. Related option
 
 - `keep_envelope` (default `False`): if `True`, core-collapse BHs also accrete the hydrogen envelope, scaled by the
   fallback fraction. COMPAS `MALTSEV2024` sets the BH mass to the He-core mass.
-- `kick_model` (default `"fallback"`): Maxwellian natal kicks with dispersion `sigmans`, scaled by (1 - fallback
-  fraction), with no kick for BHs from pulsational pair instability. `"compas"` uses the kicks applied by COMPAS.
+- `kick_model` (default `"auto"`): `"fallback"` draws Maxwellian natal kicks with dispersion `sigmans`, scaled by
+  (1 - fallback fraction), with no kick for BHs from pulsational pair instability. `"compas"` uses the kicks applied
+  by COMPAS. `"auto"` is `"fallback"` except for `compas-mullermandel`, whose prescription defines no fallback
+  fraction, where it uses the COMPAS kicks.
 
 The default GW recoil model (`remnant_model="RemnantModelSimple"`) computes remnant spins and kicks but sets the
 remnant mass to m1 + m2. The NR-surrogate models `RemnantModelVarma19Islam23` and `RemnantModelIslam26` include the
