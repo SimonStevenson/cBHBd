@@ -19,7 +19,10 @@ Options (set through ``CBHBD``):
   envelope is lost.
 - ``kick_model`` (default "auto"): "fallback" draws Maxwellian kicks with dispersion ``sigmans`` scaled by
   (1 - fallback fraction), as in the default cBHBd model. BHs from pulsational pair-instability supernovae receive no
-  kick, as in COMPAS by default. "compas" uses the natal kick magnitudes applied by COMPAS itself. "auto" is
+  kick, as in COMPAS by default. "reduced" draws Maxwellian kicks with dispersion ``sigmans`` scaled by
+  1.4 Msun / M_BH (momentum-conserving kicks, COMPAS ``--black-hole-kicks-mode REDUCED``), again with no kick for
+  PPISN BHs; with ``keep_envelope`` the scaling uses the BH mass including the accreted envelope. "compas" uses the
+  natal kick magnitudes applied by COMPAS itself. "auto" is
   "fallback" except for prescriptions that do not define a fallback fraction (MULLERMANDEL), where it is "compas";
   otherwise every Mueller-Mandel BH would get a full neutron-star kick.
 
@@ -41,7 +44,8 @@ CCSN, PPISN = 1, 8  # COMPAS supernova types
 bounds = namedtuple("bounds", ("lower", "upper"))
 mbin = namedtuple("mbin", ("lower", "upper"))  # Same layout as ssptools.masses.mbin
 
-KICK_MODELS = ("auto", "fallback", "compas")
+KICK_MODELS = ("auto", "fallback", "reduced", "compas")
+NS_MASS = 1.4  # [Msun] canonical NS mass for kick_model="reduced" (COMPAS NEUTRON_STAR_MASS)
 # COMPAS prescriptions that do not define a fallback fraction (it is stored as 0 for every BH), so fallback-scaled
 # kicks would give their BHs full neutron-star kicks. "auto" uses the kicks COMPAS applied for these.
 NO_FALLBACK_PRESCRIPTIONS = ("MULLERMANDEL",)
@@ -89,7 +93,7 @@ class TabulatedRemnants:
         Solar metallicity used to convert [Fe/H] to Z. Must match the convention used by CBHBD (0.02 by default).
     keep_envelope : bool
         If True, core-collapse BHs also accrete the H envelope, scaled by the fallback fraction.
-    kick_model : {"auto", "fallback", "compas"}
+    kick_model : {"auto", "fallback", "reduced", "compas"}
         How natal kicks are computed, see the module documentation.
     """
 
@@ -138,8 +142,13 @@ class TabulatedRemnants:
             mbh = mbh + fb * envelope
         self.mbh = mbh  # [Msun] BH mass for each (ZAMS mass, realisation); 0 if no BH forms
 
-        # Fallback fraction used to scale kicks. PPISN BHs get no kick (as in COMPAS by default).
-        self.fb_kick = np.where(sn_type == PPISN, 1.0, fb)
+        # Factor scaling sigmans for each BH: (1 - fallback fraction) or NS_MASS / M_BH. PPISN BHs get no kick (as in
+        # COMPAS by default).
+        if kick_model == "reduced":
+            kick_scale = np.minimum(NS_MASS / np.where(mbh > 0, mbh, np.inf), 1.0)
+        else:
+            kick_scale = 1 - fb
+        self.kick_scale = np.where(sn_type == PPISN, 0.0, kick_scale)
         self.v_kick_compas = t["v_kick"][self.iZ].astype(float)
 
         if not is_bh.any():
@@ -164,7 +173,7 @@ class TabulatedRemnants:
         """Probability that the BH from grid point (idx, seed) is retained with escape velocity ``vesc``."""
         if self.kick_model == "compas":
             return (self.v_kick_compas[idx, seed] <= vesc).astype(float)
-        return maxwellian_cdf(vesc, sigma * (1 - self.fb_kick[idx, seed]))
+        return maxwellian_cdf(vesc, sigma * self.kick_scale[idx, seed])
 
     def sample(self, mi, sigma):
         """Draw BH masses and natal kicks [km/s] for stars of ZAMS mass ``mi``.
@@ -179,7 +188,7 @@ class TabulatedRemnants:
         if self.kick_model == "compas":
             vkick = self.v_kick_compas[idx, seed]
         else:
-            scale = sigma * (1 - self.fb_kick[idx, seed])
+            scale = sigma * self.kick_scale[idx, seed]
             vkick = scale * np.linalg.norm(np.random.normal(size=(mi.size, 3)), axis=1)
         return mbh, vkick
 

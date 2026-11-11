@@ -49,7 +49,7 @@ class CBHBD:
         self.ifmr = "sevn-rapid"  # IFMR relation to be used if ssp is selected. Either an ssptools BH_method or a
         # tabulated COMPAS model, see remnant_tables.available_tables(), e.g. "compas-maltsev-balanced".
         self.keep_envelope = False  # Tabulated COMPAS IFMRs only. If True, core-collapse BHs also accrete the H envelope (scaled by the fallback fraction).
-        self.kick_model = "auto"  # Tabulated COMPAS IFMRs only. "fallback": Maxwellian kicks with sigmans scaled by (1 - fallback fraction); "compas": kicks applied by COMPAS; "auto": "fallback" unless the prescription defines no fallback fraction (MULLERMANDEL), then "compas".
+        self.kick_model = "auto"  # Tabulated COMPAS IFMRs only. "fallback": Maxwellian kicks with sigmans scaled by (1 - fallback fraction); "reduced": sigmans scaled by 1.4 Msun / M_BH (COMPAS REDUCED); "compas": kicks applied by COMPAS; "auto": "fallback" unless the prescription defines no fallback fraction (MULLERMANDEL), then "compas".
 
         self.dtout = None  # [Myr] Time step for integration. If None, computations are faster.
         self.dense_output = True  # Condition for solve_ivp to give continuous solutions. Facilitates interpolation. Can be used instead of specifying t_eval. Necessary if compute_mergers==True.

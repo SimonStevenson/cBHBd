@@ -70,3 +70,24 @@ def test_auto_kicks_for_prescriptions_without_fallback():
     assert np.mean(mm.retention_fraction(*bh, 111.0, 217.0)) > 0.5
     with pytest.warns(UserWarning):
         remnant_tables.TabulatedRemnants("compas-mullermandel", FeH, kick_model="fallback")
+
+
+def test_reduced_kicks():
+    # Momentum-conserving kicks (COMPAS --black-hole-kicks-mode REDUCED): sigma scaled by 1.4 Msun / M_BH, no kick for
+    # PPISN BHs
+    FeH = np.log10(0.002 / 0.02)
+    red = remnant_tables.TabulatedRemnants("compas-maltsev-balanced", FeH, kick_model="reduced")
+    fb = remnant_tables.TabulatedRemnants("compas-maltsev-balanced", FeH)
+    bh = red.mbh > 0
+    ppisn = np.load(remnant_tables._table_path("compas-maltsev-balanced"))["sn_type"][red.iZ] == remnant_tables.PPISN
+    assert np.allclose(red.kick_scale[bh & ~ppisn], remnant_tables.NS_MASS / red.mbh[bh & ~ppisn])
+    assert (red.kick_scale[bh & ppisn] == 0).all()
+    np.random.seed(1)
+    m, v = red.sample(np.random.uniform(20, 60, 40_000), 217.0)
+    ok = (m > 0) & (m < 30)  # core-collapse BHs only (PPISN BHs are heavier)
+    assert ok.sum() > 5_000
+    sigma = 217.0 * remnant_tables.NS_MASS / m[ok]
+    assert abs(np.mean((v[ok] / sigma) ** 2) - 3) < 0.1  # Maxwellian: <v^2> = 3 sigma^2
+    # Fallback kicks leave most Maltsev BHs unkicked, so reduced kicks retain fewer at low escape speed
+    idx = np.where(bh)
+    assert np.mean(red.retention_fraction(*idx, 20.0, 217.0)) < np.mean(fb.retention_fraction(*idx, 20.0, 217.0))
