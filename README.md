@@ -73,6 +73,11 @@ Available tables (`cbhbd.remnant_tables.available_tables()`):
   maximum 1G BH mass is 39.5, 45.1 and 56.2 Msun, against 50.7 Msun with no shift. Built on OzSTAR with the same
   COMPAS commit; an unshifted rebuild there matched the laptop table to about 1e-6 relative (compiler and library
   differences), with no change in any remnant or supernova type.
+- `compas-maltsev-balanced-brcek`: Maltsev balanced with BRCEK main-sequence cores (Shikauchi et al. 2024,
+  `--main-sequence-core-mass-prescription BRCEK`; the default is MANDEL, and HURLEY gives a table identical to
+  MANDEL). BRCEK changes single stars: at Z = 0.011 the BH fraction (10-150 Msun ZAMS) rises from 0.10 to 0.24 and
+  the median BH mass from 7.8 to 21.5 Msun, and at Z = 1e-3 the maximum BH mass from 44 to 50 Msun. No BH lands in
+  12-16 Msun at any metallicity. Built on OzSTAR with the same COMPAS commit.
 
 All tables use the `HENDRIKS` pulsational pair-instability prescription and cover Z = 1e-4 to 0.03 and ZAMS masses of
 10 to 150 Msun. Each grid point stores several COMPAS realisations, so stochastic prescriptions are sampled, and
