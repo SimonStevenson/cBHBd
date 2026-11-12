@@ -51,3 +51,22 @@ def test_merger_small_cluster():
     verbose = True
 
     model = cbhbd.cbhbd.CBHBD(tend=tend, M0=M0, Z=Z, rh0=rh0, compute_mergers=True, rg=rg, seed=seed, verbose=verbose)
+
+
+def test_merger_delay_is_coalescence_time():
+    # t_merge - t_sim is the GW coalescence time of the output (a, e) (Mandel 2021 fit), not a/|da/dt|
+    import numpy as np
+    from cbhbd import mergers
+    from cbhbd.cbhbd import CBHBD
+
+    m = CBHBD(M0=3e5, rh0=1, Z=0.002, seed=3, verbose=False).mergers
+    ej = m[m.merger_type == "ejected"]
+    assert len(ej) > 0
+    G, c = 4 * np.pi ** 2, 63198
+    T = mergers.coalescence_time(ej.a, ej.e, ej.m1, ej.m2, G, c)
+    # t_merge = t + T, with t the synchronised time (>= t_sim)
+    assert np.all(ej.t_merge - T >= ej.t_sim * (1 - 1e-9))
+    R = 1 + 73 / 24 * ej.e ** 2 + 37 / 96 * ej.e ** 4
+    tau = 5 * c ** 5 * ej.a ** 4 * (1 - ej.e ** 2) ** 3.5 / (64 * G ** 3 * ej.m1 * ej.m2 * (ej.m1 + ej.m2) * R)
+    assert np.any(ej.t_merge - tau < ej.t_sim * (1 - 1e-6))  # the old delay a/|da/dt| is not what was added
+    assert mergers.T_MERGE_DEFINITION == "coalescence_mandel2021"
