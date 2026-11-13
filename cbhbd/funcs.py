@@ -41,9 +41,10 @@ def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF, t
     if mmin > BH_mi_lower:
         raise NotImplementedError(f"Can't have an IMF with a mass break M > {BH_mi_lower} Msun")
 
-    # If the cluster doesn't form BHs (Mbh < 1), return
+    # If the cluster retains no BHs (Mbh <= 1), return an empty BH array with the same columns as below
+    # (mbh, spin, tdf, gen, aBHgen), so that len(bhv) == 0
     if Mbh <= 1:
-        return 0, np.empty((4, 0))
+        return 0, np.empty((0, 5))
 
     # We iterate in case we don't sample enough BHs. This is faster than a Python loop
     i = 1

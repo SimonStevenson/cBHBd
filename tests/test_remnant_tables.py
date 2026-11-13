@@ -91,3 +91,18 @@ def test_reduced_kicks():
     # Fallback kicks leave most Maltsev BHs unkicked, so reduced kicks retain fewer at low escape speed
     idx = np.where(bh)
     assert np.mean(red.retention_fraction(*idx, 20.0, 217.0)) < np.mean(fb.retention_fraction(*idx, 20.0, 217.0))
+
+
+def test_cluster_that_retains_no_bhs():
+    # A low-mass, extended, metal-rich cluster with reduced kicks (10 Msun BHs get about 30 km/s, v_esc is a few km/s)
+    # retains no BHs: the run must finish with no mergers instead of failing on the empty BH array
+    model = cbhbd.cbhbd.CBHBD(M0=117902.8154156784, rh0=11.034861190082008, Z=0.025086176431832863, rg=8.0,
+                              seed=200104, tend=13800.0, verbose=False, ifmr="compas-maltsev-balanced",
+                              kick_model="reduced")
+    assert model.cluster.Mbh[0] <= 1
+    assert model.bhv.shape == (0, 5)
+    assert len(model.mergers) == 0
+    assert model.mIMBH is None
+    _, bhv = funcs.sample_BHs(0.5, 10.0, model.m_breaks[-2], model.mmax, model.a_slopes[-1], model.FeH, model.ifmr,
+                              model.cluster.sigmans, model.mmax_IMF, table=model.cluster.remnant_table)
+    assert bhv.shape == (0, 5)
