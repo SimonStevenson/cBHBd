@@ -13,14 +13,18 @@ def sample_power_law(xmin, xmax, alpha, size):
     return (-(xmin ** (1 + alpha) * (-1 + r)) + xmax ** (1 + alpha) * r) ** (1 / (1 + alpha))
 
 
-def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF, table=None):
+def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF, table=None, natal_spin_sigma=0.0,
+               spin_seed=None):
     # Sample the original population of stellar-mass BHs. The total mass of the population is (approximately) Mbh.
     # Remove BHs with a kick velocity greater than v_esc0. The progenitors follow an IMF with slope alpha between mmin
     # and mmax (possibly with different slopes at lower masses). FeH is the iron abundance, ifmr_str is the
     # initial-final mass relation after stellar evolution (including supernova prescriptions), and sigma is the
     # parameter of the Maxwellian distribution of kick velocities. mmax_IMF is the maximum mass of the IMF before aBHs
     # (otherwise it's just equal to mmax). If table is a remnant_tables.TabulatedRemnants object, BH masses and kicks
-    # are drawn from the tabulated COMPAS single-star outcomes instead of the ssptools IFMR.
+    # are drawn from the tabulated COMPAS single-star outcomes instead of the ssptools IFMR. Natal spin magnitudes
+    # follow a half-normal of width natal_spin_sigma (0: non-spinning), capped at 1, drawn from a generator seeded by
+    # spin_seed and kept separate from the global stream, so the masses, kicks and dynamics before the first merger are
+    # the same for every natal_spin_sigma. Spin directions are drawn (isotropically) by the remnant model at merger.
 
     # Load initial-final mass relation
     if table is not None:
@@ -85,7 +89,7 @@ def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF, t
         mproj = mproj[:idx + 1]
 
         # Construct BH array
-        spin = np.zeros_like(mbh)  # Zero initial spin
+        spin = natal_spins(len(mbh), natal_spin_sigma, spin_seed)
         gen = np.ones_like(mbh, dtype=int)
         tdf = np.zeros_like(mbh)
         aBHgen = (mproj > mmax_IMF).astype(int)
@@ -93,6 +97,17 @@ def sample_BHs(Mbh, v_esc0, mmin, mmax, alpha, FeH, ifmr_str, sigma, mmax_IMF, t
         bhv = np.vstack([mbh, spin, tdf, gen, aBHgen]).T
 
         return actual_Mbh, bhv
+
+
+def natal_spins(n, natal_spin_sigma=0.0, spin_seed=None):
+    # Natal spin magnitudes of n first-generation BHs: |N(0, natal_spin_sigma)| capped at 1, or zero if
+    # natal_spin_sigma == 0. Uses its own generator (seeded by spin_seed, random if None), never the global stream.
+    if natal_spin_sigma < 0:
+        raise ValueError(f"natal_spin_sigma must be >= 0, got {natal_spin_sigma}")
+    if natal_spin_sigma == 0:
+        return np.zeros(n)
+    rng = np.random.default_rng(None if spin_seed is None else [int(spin_seed), 0x5B1A])
+    return np.minimum(np.abs(rng.normal(0.0, natal_spin_sigma, n)), 1.0)
 
 
 def get_sync_time(cbh, fbh0, Mcl_i, M3ej, t):

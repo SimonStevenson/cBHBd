@@ -201,4 +201,42 @@ class RemnantModelIslam26(RemnantModel):
         return m_rem, chi_f, v_kick
 
 
-available_remnant_models = {rm.__name__: rm for rm in RemnantModel.__subclasses__()}
+class RemnantModelIslam26NRSur(RemnantModelIslam26):
+    """RemnantModelIslam26, except that spinning binaries with q <= 6 take the kick from NRSur7dq4Remnant, evaluated
+    with the same (isotropic) spin vectors as the remnant mass and spin."""
+
+    def __init__(self):
+        super().__init__()
+
+    def get_description(self):
+        return ("As RemnantModelIslam26 (Islam et al. 2026 kicks; NRSur7dq4Remnant / BHPTNRSurRemnant mass and spin), "
+                "except that for spinning binaries with q <= 6 the kick also comes from NRSur7dq4Remnant (Varma et al. "
+                "2019), evaluated with the same spin vectors as the remnant mass and spin. The Islam et al. (2026) "
+                "precessing-kick normalising flow marginalises over spin angles and is too broad at small spin "
+                "magnitudes (e.g. 38-147 km/s, 10-90%, for q = 1.5 and chi1 = chi2 = 0.01, where NRSur7dq4 gives "
+                "97-101 km/s), which matters for non-zero natal spins. Spin directions are isotropic (uniform in "
+                "cos theta). Non-spinning binaries are treated exactly as in RemnantModelIslam26.")
+
+    @staticmethod
+    def _isotropic(S):
+        cos_t = np.random.uniform(-1, 1)
+        phi = np.random.uniform(0, 2 * np.pi)
+        sin_t = np.sqrt(1 - cos_t ** 2)
+        return S * np.array([sin_t * np.cos(phi), sin_t * np.sin(phi), cos_t])
+
+    def get_remnant(self, m1, m2, S1, S2):
+        q = m1 / m2
+        if q > 6 or (S1 == 0 and S2 == 0):
+            return super().get_remnant(m1, m2, S1, S2)
+        S1_vec, S2_vec = self._isotropic(S1), self._isotropic(S2)
+        warnings.filterwarnings("ignore", category=UserWarning)
+        m_rem, chi_f_vec, v_kick_vec, _, _, _ = self.nr_model_lowq.all(q, S1_vec, S2_vec)
+        warnings.filterwarnings("default", category=UserWarning)
+        return m_rem * (m1 + m2), min(1.0, float(np.linalg.norm(chi_f_vec))), np.linalg.norm(v_kick_vec) * self.C_KM_S
+
+
+def _all_subclasses(cls):
+    return [c for sub in cls.__subclasses__() for c in (sub, *_all_subclasses(sub))]
+
+
+available_remnant_models = {rm.__name__: rm for rm in _all_subclasses(RemnantModel)}

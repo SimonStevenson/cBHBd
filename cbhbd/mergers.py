@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pandas as pd
 from numpy.random import random
@@ -50,6 +52,17 @@ def _run_mergers(self):
     if self.seed is not None:
         np.random.seed(self.seed)
 
+    # Load the GW remnant model (once per process). Models with a normalising-flow kick sample through torch, whose
+    # generator is seeded here as well so that a seeded run is reproducible.
+    if CBHBD.remnant_models[self.remnant_model] is None:
+        try:
+            CBHBD.remnant_models[self.remnant_model] = remnant.available_remnant_models[self.remnant_model]()
+        except Exception as err:
+            raise ImportError(f"Error in loading remnant model {self.remnant_model}. If this can not be fixed, "
+                              f"consider using the (less accurate) remnant_model='RemnantModelSimple'\n\n{err}")
+    if self.seed is not None and "torch" in sys.modules:
+        sys.modules["torch"].manual_seed(int(self.seed))
+
     # Constants and conversion factors
     G_AU_MSUN_KMS = 887.1278675
     G_AU_MSUN_YR = 4 * np.pi ** 2
@@ -65,7 +78,8 @@ def _run_mergers(self):
     # Build array with BH properties for retained stellar-mass BHs
     Mtot, self.bhv = funcs.sample_BHs(self.cluster.Mbh[0], v_esc0, self.m_breaks[-2], self.mmax,
                                       self.a_slopes[-1], self.FeH, self.ifmr, self.cluster.sigmans, self.mmax_IMF,
-                                      table=self.cluster.remnant_table)
+                                      table=self.cluster.remnant_table, natal_spin_sigma=self.natal_spin_sigma,
+                                      spin_seed=self.seed)
     Nbh0 = len(self.bhv)
 
     if self.verbose:
@@ -374,13 +388,6 @@ def _run_mergers(self):
         assert not np.isnan(t_gw), f"Error in {t_gw = }"
 
         # Compute GW recoil kick and spins
-        if CBHBD.remnant_models[self.remnant_model] is None:
-            try:
-                CBHBD.remnant_models[self.remnant_model] = remnant.available_remnant_models[self.remnant_model]()
-            except Exception as err:
-                raise ImportError(f"Error in loading remnant model {self.remnant_model}. If this can not be fixed, "
-                                  f"consider using the (less accurate) remnant_model='RemnantModelSimple'\n\n{err}")
-
         m_rem, chi_f, v_kick = CBHBD.remnant_models[self.remnant_model].get_remnant(m1, m2, S1, S2)
 
         assert 1 >= chi_f >= 0, f"Error in {chi_f = }"
