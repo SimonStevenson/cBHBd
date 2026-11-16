@@ -68,10 +68,10 @@ Available tables (`cbhbd.remnant_tables.available_tables()`):
   (2025)
 - `compas-fryer-delayed`: Fryer et al. (2012) delayed
 - `compas-mullermandel`: Mandel & Müller (2020), the COMPAS default
-- `compas-maltsev-balanced-ppi-10`, `-ppi-5`, `-ppi-2.5`, `-ppi+2.5`, `-ppi+5`: Maltsev balanced with the HENDRIKS
-  pulsational pair-instability CO-core shift (`--PPI-CO-Core-Shift-Hendriks`) set to -10, -5, -2.5, +2.5 and +5 Msun;
-  at Z = 2.2e-4 the maximum 1G BH mass is 39.5, 45.1, 47.9, 53.5 and 56.2 Msun, against 50.7 Msun with no shift
-  (at Z = 1e-4: 39.7, 45.4, 48.2, 53.8, 56.5 and 51.0). Built on OzSTAR with the same
+- `compas-maltsev-balanced-ppi-10`, `-ppi-7.5`, `-ppi-5`, `-ppi-2.5`, `-ppi+2.5`, `-ppi+5`: Maltsev balanced with the
+  HENDRIKS pulsational pair-instability CO-core shift (`--PPI-CO-Core-Shift-Hendriks`) set to -10, -7.5, -5, -2.5, +2.5
+  and +5 Msun; at Z = 2.2e-4 the maximum 1G BH mass is 39.5, 42.3, 45.1, 47.9, 53.5 and 56.2 Msun, against 50.7 Msun
+  with no shift (at Z = 1e-4: 39.7, 42.6, 45.4, 48.2, 53.8, 56.5 and 51.0). Built on OzSTAR with the same
   COMPAS commit; an unshifted rebuild there matched the laptop table to about 1e-6 relative (compiler and library
   differences), with no change in any remnant or supernova type.
 - `compas-maltsev-balanced-brcek`: Maltsev balanced with BRCEK main-sequence cores (Shikauchi et al. 2024,
